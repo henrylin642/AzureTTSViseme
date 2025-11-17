@@ -1,0 +1,15 @@
+{
+  "name": "azure-tts-viseme-demo",
+  "version": "1.0.0",
+  "description": "Azure Speech Service TTS with viseme timeline demo",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "microsoft-cognitiveservices-speech-sdk": "^1.38.0"
+  }
+}

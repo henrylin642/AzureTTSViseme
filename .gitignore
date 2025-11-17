@@ -1,0 +1,11 @@
+node_modules/
+.env
+.DS_Store
+# local references
+ref/
+
+# build artifacts
+*.log
+
+# OS files
+Thumbs.db
