@@ -98,6 +98,55 @@
         width: 100%;
         margin-top: 1rem;
       }
+      .input-field {
+        width: 100%;
+        margin-top: 0.5rem;
+        padding: 0.65rem 0.75rem;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        background: rgba(0, 0, 0, 0.4);
+        color: inherit;
+        font-size: 0.95rem;
+      }
+      .avatar-block {
+        margin-top: 1.25rem;
+        padding: 1rem;
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(43, 46, 74, 0.45);
+        box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.25);
+      }
+      .avatar-block h2 {
+        margin: 0 0 0.5rem;
+        font-size: 1.05rem;
+      }
+      .avatar-block p {
+        margin: 0.5rem 0 0;
+        font-size: 0.9rem;
+        opacity: 0.85;
+        line-height: 1.4;
+      }
+      .avatar-stage {
+        position: relative;
+        width: 100%;
+        aspect-ratio: 3 / 4;
+        border-radius: 20px;
+        overflow: hidden;
+        background: linear-gradient(180deg, #22254d 0%, #05070f 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.5rem;
+      }
+      .avatar-stage video,
+      .avatar-stage img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 14px;
+        box-shadow: 0 25px 45px rgba(0, 0, 0, 0.35);
+        background: #020409;
+      }
     </style>
     <script type="importmap">
       {
@@ -106,6 +155,11 @@
           "three/examples/jsm/loaders/GLTFLoader.js": "https://cdn.jsdelivr.net/npm/three@0.161.0/examples/jsm/loaders/GLTFLoader.js",
           "three/examples/jsm/controls/OrbitControls.js": "https://cdn.jsdelivr.net/npm/three@0.161.0/examples/jsm/controls/OrbitControls.js"
         }
+      }
+    </script>
+    <script>
+      window.APP_CONFIG = window.APP_CONFIG || {
+        apiBase: ''
       }
     </script>
   </head>
@@ -133,6 +187,23 @@
 
       <div class="right-panel">
         <canvas id="scene-canvas"></canvas>
+        <div class="avatar-block">
+          <h2>D-ID 數字人影片</h2>
+          <div class="avatar-stage">
+            <video id="did-video" controls playsinline poster="assets/digital-avatar.svg"></video>
+          </div>
+          <p>
+            使用 D-ID API 將圖片轉成會說話的數字人，可自訂圖片網址與語音文字。
+            每次執行會產生可播放的 MP4 影片。
+          </p>
+          <label for="did-image-url">數字人圖片（可選，需為可公開存取的 URL）</label>
+          <input id="did-image-url" type="url" class="input-field" placeholder="預設使用官方示例圖" />
+          <button id="did-btn">呼叫 D-ID 生成影片</button>
+          <div class="status">
+            <strong>數字人狀態：</strong>
+            <span id="did-status">等待執行</span>
+          </div>
+        </div>
       </div>
     </section>
 

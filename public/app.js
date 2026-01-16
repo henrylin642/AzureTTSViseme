@@ -2,7 +2,42 @@ import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 
-const TTS_ENDPOINT = '/api/tts-viseme'
+const DEFAULT_API_BASE = 'http://localhost:3000'
+
+function normalizeBaseUrl(value) {
+  if (!value) return ''
+  return value.replace(/\/+$/, '')
+}
+
+function resolveApiBase() {
+  if (typeof window === 'undefined') return DEFAULT_API_BASE
+  const params = new URLSearchParams(window.location.search)
+  const queryBase = params.get('apiBase')
+  if (isValidHttpUrl(queryBase)) {
+    return normalizeBaseUrl(queryBase)
+  }
+
+  const configBase = window.APP_CONFIG?.apiBase
+  if (isValidHttpUrl(configBase)) {
+    return normalizeBaseUrl(configBase)
+  }
+
+  const origin = window.location.origin || ''
+  const protocol = window.location.protocol || ''
+  if (origin.includes('localhost:3001') || origin.includes('127.0.0.1:3001') || protocol === 'file:') {
+    return DEFAULT_API_BASE
+  }
+  if (origin.includes('localhost:3000') || origin.includes('127.0.0.1:3000')) {
+    return ''
+  }
+  return ''
+}
+
+const API_BASE = resolveApiBase()
+const withApiBase = (path) => `${API_BASE}${path}`
+
+const TTS_ENDPOINT = withApiBase('/api/tts-viseme')
+const DID_ENDPOINT = withApiBase('/api/did-talk')
 const FACE_MODEL_URL = 'assets/face.glb' // 請將人臉 GLB 放在 public/assets/face.glb
 
 // const visemeIdToName = {
@@ -78,6 +113,10 @@ const audioPlayer = document.getElementById('audio-player')
 const visemeOutput = document.getElementById('viseme-output')
 const statusText = document.getElementById('status-text')
 const canvas = document.getElementById('scene-canvas')
+const didBtn = document.getElementById('did-btn')
+const didStatus = document.getElementById('did-status')
+const didVideo = document.getElementById('did-video')
+const didImageInput = document.getElementById('did-image-url')
 
 let renderer
 let scene
@@ -213,7 +252,6 @@ function stopLipsync() {
 function startLipsync(timeline, audioDuration = 0) {
   if (!faceMesh) {
     console.warn('人臉模型尚未載入')
-    return
   }
   lipsyncState.timeline = timeline.slice()
   lipsyncState.currentIndex = 0
@@ -225,7 +263,7 @@ function startLipsync(timeline, audioDuration = 0) {
 
 function updateLipsync() {
   const { timeline, playing } = lipsyncState
-  if (!playing || !timeline.length || !faceMesh) return
+  if (!playing || !timeline.length) return
 
   const elapsed = performance.now() / 1000 - lipsyncState.startTime
   const lastTime = timeline[timeline.length - 1].time
@@ -242,8 +280,10 @@ function updateLipsync() {
   }
   lipsyncState.currentIndex = idx
 
-  const visemeName = timeline[idx]?.name || 'sil'
-  applyViseme(visemeName)
+  const currentViseme = timeline[idx]
+  if (currentViseme?.morphTarget) {
+    applyViseme(currentViseme.morphTarget)
+  }
 }
 
 function applyViseme(visemeName) {
@@ -264,6 +304,92 @@ function renderLoop() {
   controls?.update()
   updateLipsync()
   renderer?.render(scene, camera)
+}
+
+function setDidStatus(message) {
+  if (!didStatus) return
+  didStatus.textContent = message
+}
+
+function resetDidVideo() {
+  if (!didVideo) return
+  didVideo.pause()
+  didVideo.removeAttribute('src')
+  didVideo.load()
+}
+
+function isValidHttpUrl(value) {
+  if (!value) return false
+  try {
+    const parsed = new URL(value)
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:'
+  } catch (error) {
+    return false
+  }
+}
+
+async function handleDidTalk() {
+  const text = textInput.value.trim()
+  if (!text) {
+    alert('請輸入要說的句子')
+    return
+  }
+  if (!didBtn) return
+
+  didBtn.disabled = true
+  setDidStatus('呼叫 D-ID API 中…')
+  resetDidVideo()
+
+  try {
+    const payload = { text }
+    const customImage = didImageInput?.value.trim()
+    if (customImage) {
+      if (!isValidHttpUrl(customImage)) {
+        setDidStatus('圖片網址必須是 http(s) 開頭的公開網址')
+        didBtn.disabled = false
+        return
+      }
+      payload.imageUrl = customImage
+    }
+
+    const response = await fetch(DID_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+
+    const rawText = await response.text()
+    let data = {}
+    if (rawText) {
+      try {
+        data = JSON.parse(rawText)
+      } catch (error) {
+        data = { raw: rawText }
+      }
+    }
+    if (!response.ok) {
+      throw new Error(data.error || data.message || data.detail || data.raw || 'D-ID API 回傳錯誤')
+    }
+
+    if (data.video_url) {
+      didVideo.src = data.video_url
+      didVideo.load()
+      setDidStatus('生成完成，可播放影片')
+      const playPromise = didVideo.play()
+      if (playPromise?.catch) {
+        playPromise.catch(() => {
+          /* ignore autoplay errors */
+        })
+      }
+    } else {
+      setDidStatus('D-ID 任務完成，但未取得影片 URL')
+    }
+  } catch (error) {
+    console.error('呼叫 D-ID API 失敗：', error)
+    setDidStatus(`呼叫 D-ID 失敗：${error.message}`)
+  } finally {
+    didBtn.disabled = false
+  }
 }
 
 async function handleSpeak() {
@@ -305,7 +431,7 @@ async function handleSpeak() {
         'mouthClose'
       return {
         time: item.time,
-        name: shapeKey,
+        morphTarget: shapeKey,
       }
     })
 
@@ -349,3 +475,4 @@ async function handleSpeak() {
 
 initScene()
 speakBtn.addEventListener('click', handleSpeak)
+didBtn?.addEventListener('click', handleDidTalk)
