@@ -2,6 +2,11 @@ import express from 'express';
 import dotenv from 'dotenv';
 import sdk from 'microsoft-cognitiveservices-speech-sdk';
 import fetch from 'node-fetch';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 dotenv.config();
 
@@ -24,7 +29,12 @@ if (!DID_API_KEY || !DID_API_SECRET) {
 }
 
 app.use(express.json());
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Explicitly serve index.html for root
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
 function isValidHttpUrl(value) {
   if (!value || typeof value !== 'string') return false;
