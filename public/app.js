@@ -103,6 +103,8 @@ const mappingContainer = document.getElementById('mapping-container')
 const modelMorphCountSpan = document.getElementById('model-morph-count')
 const saveMappingBtn = document.getElementById('save-mapping-btn')
 const modelUploadInput = document.getElementById('model-upload')
+const testerContainer = document.getElementById('tester-container')
+const resetTesterBtn = document.getElementById('reset-tester-btn')
 
 
 let renderer
@@ -150,7 +152,7 @@ function initScene() {
   controls.minDistance = 0.4
   controls.maxDistance = 2.5
   controls.enablePan = false
-  controls.autoRotate = true
+  controls.autoRotate = false
   controls.autoRotateSpeed = 0.4
 
   const hemiLight = new THREE.HemisphereLight(0xffffff, 0x111122, 1.15)
@@ -203,6 +205,7 @@ function loadFaceModel(modelUrl = FACE_MODEL_URL) {
 
         // 2. 建立 UI
         renderMappingUI(Object.keys(faceMesh.morphTargetDictionary))
+        renderTesterUI(faceMesh.morphTargetDictionary)
 
         // 3. 根據 UI 更新目前的 Mapping
         updateMappingFromUI()
@@ -318,6 +321,59 @@ function updateMappingFromUI() {
   if (faceMesh && faceMesh.morphTargetDictionary) {
     visemeNameToIndex = {} // clear old
     buildVisemeDictionary(faceMesh.morphTargetDictionary)
+  }
+}
+
+function renderTesterUI(dict) {
+  if (!testerContainer) return
+  testerContainer.innerHTML = ''
+
+  Object.keys(dict).forEach(shapeName => {
+    const row = document.createElement('div')
+    row.className = 'mapping-row'
+
+    const label = document.createElement('label')
+    label.textContent = shapeName
+    label.title = shapeName // tooltip
+
+    const slider = document.createElement('input')
+    slider.type = 'range'
+    slider.min = '0'
+    slider.max = '1'
+    slider.step = '0.01'
+    slider.value = '0'
+    slider.style.maxWidth = '100px'
+
+    const valueDisplay = document.createElement('span')
+    valueDisplay.textContent = '0.0'
+    valueDisplay.style.marginLeft = '8px'
+    valueDisplay.style.minWidth = '24px'
+    valueDisplay.style.fontSize = '0.8rem'
+
+    slider.addEventListener('input', (e) => {
+      const val = parseFloat(e.target.value)
+      valueDisplay.textContent = val.toFixed(1)
+
+      const idx = dict[shapeName]
+      if (faceMesh && faceMesh.morphTargetInfluences && idx !== undefined) {
+        faceMesh.morphTargetInfluences[idx] = val
+      }
+    })
+
+    row.appendChild(label)
+    row.appendChild(slider)
+    row.appendChild(valueDisplay)
+    testerContainer.appendChild(row)
+  })
+}
+
+function resetTester() {
+  resetAllMorphs()
+  if (testerContainer) {
+    const sliders = testerContainer.querySelectorAll('input[type="range"]')
+    sliders.forEach(s => { s.value = '0' })
+    const displays = testerContainer.querySelectorAll('span')
+    displays.forEach(d => { d.textContent = '0.0' })
   }
 }
 
@@ -537,4 +593,5 @@ initScene()
 speakBtn.addEventListener('click', handleSpeak)
 saveMappingBtn?.addEventListener('click', saveMapping)
 modelUploadInput?.addEventListener('change', handleModelUpload)
+resetTesterBtn?.addEventListener('click', resetTester)
 
