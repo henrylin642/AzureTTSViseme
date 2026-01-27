@@ -275,10 +275,14 @@ function applyViseme(visemeName) {
   if (!faceMesh?.morphTargetInfluences) return
   const influences = faceMesh.morphTargetInfluences
   influences.fill(0)
-  const index =
-    visemeNameToIndex[visemeName] ||
-    visemeNameToIndex[`viseme_${visemeName}`] ||
-    visemeNameToIndex.sil
+  let index = visemeNameToIndex[visemeName]
+  if (index === undefined) {
+    index = visemeNameToIndex[`viseme_${visemeName}`]
+  }
+  if (index === undefined) {
+    index = visemeNameToIndex.sil
+  }
+
   if (index !== undefined) {
     influences[index] = 1
   }
