@@ -37,7 +37,7 @@ const API_BASE = resolveApiBase()
 const withApiBase = (path) => `${API_BASE}${path}`
 
 const TTS_ENDPOINT = withApiBase('/api/tts-viseme')
-const DID_ENDPOINT = withApiBase('/api/did-talk')
+
 const FACE_MODEL_URL = 'assets/Principle.glb' // 請將人臉 GLB 放在 public/assets/
 
 // ... (existing comments)
@@ -98,10 +98,7 @@ const audioPlayer = document.getElementById('audio-player')
 const visemeOutput = document.getElementById('viseme-output')
 const statusText = document.getElementById('status-text')
 const canvas = document.getElementById('scene-canvas')
-const didBtn = document.getElementById('did-btn')
-const didStatus = document.getElementById('did-status')
-const didVideo = document.getElementById('did-video')
-const didImageInput = document.getElementById('did-image-url')
+
 
 let renderer
 let scene
@@ -295,17 +292,7 @@ function renderLoop() {
   renderer?.render(scene, camera)
 }
 
-function setDidStatus(message) {
-  if (!didStatus) return
-  didStatus.textContent = message
-}
 
-function resetDidVideo() {
-  if (!didVideo) return
-  didVideo.pause()
-  didVideo.removeAttribute('src')
-  didVideo.load()
-}
 
 function isValidHttpUrl(value) {
   if (!value) return false
@@ -317,69 +304,7 @@ function isValidHttpUrl(value) {
   }
 }
 
-async function handleDidTalk() {
-  const text = textInput.value.trim()
-  if (!text) {
-    alert('請輸入要說的句子')
-    return
-  }
-  if (!didBtn) return
 
-  didBtn.disabled = true
-  setDidStatus('呼叫 D-ID API 中…')
-  resetDidVideo()
-
-  try {
-    const payload = { text }
-    const customImage = didImageInput?.value.trim()
-    if (customImage) {
-      if (!isValidHttpUrl(customImage)) {
-        setDidStatus('圖片網址必須是 http(s) 開頭的公開網址')
-        didBtn.disabled = false
-        return
-      }
-      payload.imageUrl = customImage
-    }
-
-    const response = await fetch(DID_ENDPOINT, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    })
-
-    const rawText = await response.text()
-    let data = {}
-    if (rawText) {
-      try {
-        data = JSON.parse(rawText)
-      } catch (error) {
-        data = { raw: rawText }
-      }
-    }
-    if (!response.ok) {
-      throw new Error(data.error || data.message || data.detail || data.raw || 'D-ID API 回傳錯誤')
-    }
-
-    if (data.video_url) {
-      didVideo.src = data.video_url
-      didVideo.load()
-      setDidStatus('生成完成，可播放影片')
-      const playPromise = didVideo.play()
-      if (playPromise?.catch) {
-        playPromise.catch(() => {
-          /* ignore autoplay errors */
-        })
-      }
-    } else {
-      setDidStatus('D-ID 任務完成，但未取得影片 URL')
-    }
-  } catch (error) {
-    console.error('呼叫 D-ID API 失敗：', error)
-    setDidStatus(`呼叫 D-ID 失敗：${error.message}`)
-  } finally {
-    didBtn.disabled = false
-  }
-}
 
 async function handleSpeak() {
   const text = textInput.value.trim()
@@ -464,4 +389,4 @@ async function handleSpeak() {
 
 initScene()
 speakBtn.addEventListener('click', handleSpeak)
-didBtn?.addEventListener('click', handleDidTalk)
+
