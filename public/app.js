@@ -38,25 +38,9 @@ const withApiBase = (path) => `${API_BASE}${path}`
 
 const TTS_ENDPOINT = withApiBase('/api/tts-viseme')
 const DID_ENDPOINT = withApiBase('/api/did-talk')
-const FACE_MODEL_URL = 'assets/face.glb' // 請將人臉 GLB 放在 public/assets/face.glb
+const FACE_MODEL_URL = 'assets/Principle.glb' // 請將人臉 GLB 放在 public/assets/
 
-// const visemeIdToName = {
-//   0: 'sil',
-//   1: 'aa',
-//   2: 'aa',
-//   3: 'ee',
-//   4: 'ih',
-//   5: 'oh',
-//   6: 'ou',
-//   7: 'w',
-//   8: 'm',
-//   9: 'fv',
-//   10: 'l',
-//   11: 'mbp',
-//   12: 'sil',
-// }
-
-
+// ... (existing comments)
 
 // Azure 官方 viseme ID → 名稱（保持原始定義，方便查表）
 const azureVisemeNames = {
@@ -84,27 +68,28 @@ const azureVisemeNames = {
   21: 'dz',
 }
 
-// 模型 shape key 對應（請依自己的 GLB 名稱調整）
+// 模型 shape key 對應（修改為 Principle.glb 的單一 ShapeKey）
+// 只有一個 'MouthOpen'，所以除了閉嘴音 (sil, m, mbp) 之外，全部對應到 'MouthOpen'
 const visemeNameToShapeKey = {
-  sil: 'Fcl_MTH_Neutral',
-  aa: 'Fcl_MTH_A',
-  ee: 'Fcl_MTH_I',
-  ih: 'Fcl_MTH_I',
-  oh: 'Fcl_MTH_O',
-  ou: 'Fcl_MTH_U',
-  w: 'Fcl_MTH_U',
-  m: 'Fcl_MTH_Neutral',
-  fv: 'mouthFunnel',
-  l: 'Fcl_MTH_E',
-  mbp: 'Fcl_MTH_Neutral',
-  ch: 'mouthFunnel',
-  th: 'Fcl_MTH_E',
-  dh: 'Fcl_MTH_E',
-  r: 'Fcl_MTH_U',
-  sx: 'Fcl_MTH_E',
-  k: 'Fcl_MTH_O',
-  t: 'Fcl_MTH_E',
-  dz: 'Fcl_MTH_A',
+  sil: null,
+  aa: 'MouthOpen',
+  ee: 'MouthOpen',
+  ih: 'MouthOpen',
+  oh: 'MouthOpen',
+  ou: 'MouthOpen',
+  w: 'MouthOpen',
+  m: null, // 閉嘴
+  fv: 'MouthOpen',
+  l: 'MouthOpen',
+  mbp: null, // 閉嘴
+  ch: 'MouthOpen',
+  th: 'MouthOpen',
+  dh: 'MouthOpen',
+  r: 'MouthOpen',
+  sx: 'MouthOpen',
+  k: 'MouthOpen',
+  t: 'MouthOpen',
+  dz: 'MouthOpen',
 }
 
 const textInput = document.getElementById('text-input')
