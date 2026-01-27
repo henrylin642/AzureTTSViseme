@@ -111,7 +111,7 @@ let camera
 let controls
 let faceRoot = null
 let faceMesh = null
-const visemeNameToIndex = {}
+let visemeNameToIndex = {}
 let isModelReady = false
 
 const lipsyncState = {
