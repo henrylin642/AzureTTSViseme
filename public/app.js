@@ -329,18 +329,20 @@ function saveMapping() {
 // --------------------------------
 
 function buildVisemeDictionary(dict) {
-  // 原本的邏輯是直接拿 key map，現在我們要透過 visemeNameToShapeKey 做中介
-  // 但為了效能，我們還是預先計算 visemeName -> index
+  // 1. 先把所有原始的 ShapeKey 名稱都放進去 (例如 'MouthOpen' -> 0)
+  // 這樣 handleSpeak 即使直接傳 'MouthOpen' 進來也能找到 index
+  Object.entries(dict).forEach(([key, index]) => {
+    visemeNameToIndex[key] = index
+  })
 
-  // 1. 為了相容 Azure 傳來的 visemeID，我們需要知道 'aa' 對應到哪個 GLB index
-  // visemeNameToIndex['aa'] = 3 (例如)
-
+  // 2. 再根據設定檔，把抽象的 Viseme 名稱對應到 index (例如 'aa' -> 0)
   Object.keys(visemeNameToShapeKey).forEach(visemeName => {
     const targetShapeName = visemeNameToShapeKey[visemeName]
     if (targetShapeName && dict.hasOwnProperty(targetShapeName)) {
       visemeNameToIndex[visemeName] = dict[targetShapeName]
     }
   })
+  console.log('Viseme Mapping Result:', visemeNameToIndex)
 }
 
 function resetAllMorphs() {
