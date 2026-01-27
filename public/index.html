@@ -168,6 +168,62 @@
       box-shadow: 0 25px 45px rgba(0, 0, 0, 0.35);
       background: #020409;
     }
+
+    .mapping-block {
+      margin-top: 1.25rem;
+      padding: 1rem;
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(43, 46, 74, 0.45);
+      max-height: 400px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .mapping-block h2 {
+      margin: 0 0 0.5rem;
+      font-size: 1.05rem;
+    }
+
+    .mapping-container {
+      flex: 1;
+      overflow-y: auto;
+      margin: 0.5rem 0;
+      padding-right: 0.5rem;
+    }
+
+    .mapping-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.8rem;
+      font-size: 0.9rem;
+    }
+
+    .mapping-row label {
+      flex: 1;
+      color: rgba(255, 255, 255, 0.8);
+    }
+
+    .mapping-row select {
+      flex: 1;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #fff;
+      padding: 0.4rem;
+      border-radius: 6px;
+      max-width: 160px;
+    }
+
+    .secondary-btn {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      margin-top: auto;
+    }
+
+    .secondary-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
   </style>
   <script type="importmap">
       {
@@ -209,6 +265,26 @@
 
     <div class="right-panel">
       <canvas id="scene-canvas"></canvas>
+
+      <div class="mapping-block">
+        <h2>口型對應設定 (Viseme Mapping)</h2>
+
+        <div style="margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid rgba(255,255,255,0.1);">
+          <label for="model-upload" class="secondary-btn" style="display:block; text-align:center; cursor:pointer;">
+            📂 匯入自己的 GLB 模型
+          </label>
+          <input id="model-upload" type="file" accept=".glb,.gltf" style="display: none;" />
+        </div>
+
+        <p class="description">
+          偵測到 <strong id="model-morph-count">0</strong> 個 ShapeKeys。
+          請選擇每個發音對應的模型變形：
+        </p>
+        <div id="mapping-container" class="mapping-container">
+          <!-- JS will populate this -->
+        </div>
+        <button id="save-mapping-btn" class="secondary-btn">儲存設定</button>
+      </div>
 
     </div>
   </section>

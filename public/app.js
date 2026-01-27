@@ -97,7 +97,12 @@ const speakBtn = document.getElementById('speak-btn')
 const audioPlayer = document.getElementById('audio-player')
 const visemeOutput = document.getElementById('viseme-output')
 const statusText = document.getElementById('status-text')
+
 const canvas = document.getElementById('scene-canvas')
+const mappingContainer = document.getElementById('mapping-container')
+const modelMorphCountSpan = document.getElementById('model-morph-count')
+const saveMappingBtn = document.getElementById('save-mapping-btn')
+const modelUploadInput = document.getElementById('model-upload')
 
 
 let renderer
@@ -169,10 +174,19 @@ function onWindowResize() {
   renderer.setSize(width, height, false)
 }
 
-function loadFaceModel() {
+function loadFaceModel(modelUrl = FACE_MODEL_URL) {
   setStatus('載入人臉模型中…')
+
+  // Cleanup previous model
+  if (faceRoot) {
+    scene.remove(faceRoot)
+    faceRoot = null
+    faceMesh = null
+    isModelReady = false
+  }
+
   loader.load(
-    FACE_MODEL_URL,
+    modelUrl,
     (gltf) => {
       faceRoot = gltf.scene
       faceRoot.position.set(0, -0.35, 0) // 往下移動，把臉抬到畫面中央
@@ -183,7 +197,16 @@ function loadFaceModel() {
       faceMesh = findMorphMesh(faceRoot)
       if (faceMesh?.morphTargetDictionary) {
         console.log('Morph targets:', Object.keys(faceMesh.morphTargetDictionary))
-        buildVisemeDictionary(faceMesh.morphTargetDictionary)
+
+        // 1. 先嘗試載入儲存的設定
+        loadSavedMapping()
+
+        // 2. 建立 UI
+        renderMappingUI(Object.keys(faceMesh.morphTargetDictionary))
+
+        // 3. 根據 UI 更新目前的 Mapping
+        updateMappingFromUI()
+
         resetAllMorphs()
         isModelReady = true
         setStatus('模型就緒，請輸入文字。')
@@ -209,12 +232,114 @@ function findMorphMesh(root) {
   return target
 }
 
-function buildVisemeDictionary(dict) {
-  Object.entries(dict).forEach(([key, index]) => {
-    if (key.startsWith('viseme_')) {
-      visemeNameToIndex[key.replace('viseme_', '')] = index
+// --- Dynamic Mapping UI Logic ---
+
+function loadSavedMapping() {
+  const saved = localStorage.getItem('viseme_mapping_config')
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved)
+      // 覆蓋目前的預設值
+      Object.assign(visemeNameToShapeKey, parsed)
+      console.log('已載入自訂 Viseme 設定')
+    } catch (e) {
+      console.error('讀取設定失敗', e)
     }
-    visemeNameToIndex[key] = index
+  }
+}
+
+function renderMappingUI(availableShapes) {
+  if (!mappingContainer) return
+  mappingContainer.innerHTML = ''
+
+  if (modelMorphCountSpan) {
+    modelMorphCountSpan.textContent = availableShapes.length
+  }
+
+  // 只列出需要設定的口型 (排除 null 的 sil 等，如果想讓使用者自訂 sil 也可以列出)
+  // 這裡列出所有 azureVisemeNames 裡出現過的 unique values
+  const uniqueVisemes = [...new Set(Object.values(azureVisemeNames))].sort()
+
+  uniqueVisemes.forEach(viseme => {
+    const row = document.createElement('div')
+    row.className = 'mapping-row'
+
+    const label = document.createElement('label')
+    label.textContent = `${viseme}`
+
+    // 加上簡單說明
+    if (viseme === 'sil') label.textContent += ' (靜音/閉嘴)'
+    else if (viseme === 'aa') label.textContent += ' (阿/Ah)'
+    else if (viseme === 'ou') label.textContent += ' (嗚/Ou)'
+
+    const select = document.createElement('select')
+    select.dataset.viseme = viseme
+
+    // Default option: None/Null
+    const nullOption = document.createElement('option')
+    nullOption.value = ''
+    nullOption.textContent = '-- 無 --'
+    select.appendChild(nullOption)
+
+    availableShapes.forEach(shape => {
+      const option = document.createElement('option')
+      option.value = shape
+      option.textContent = shape
+      select.appendChild(option)
+    })
+
+    // Set current value
+    const currentMap = visemeNameToShapeKey[viseme]
+    if (currentMap && availableShapes.includes(currentMap)) {
+      select.value = currentMap
+    }
+
+    // Event listener for real-time update
+    select.addEventListener('change', () => {
+      updateMappingFromUI()
+    })
+
+    row.appendChild(label)
+    row.appendChild(select)
+    mappingContainer.appendChild(row)
+  })
+}
+
+function updateMappingFromUI() {
+  if (!mappingContainer) return
+  const selects = mappingContainer.querySelectorAll('select')
+  selects.forEach(select => {
+    const viseme = select.dataset.viseme
+    const shape = select.value
+    visemeNameToShapeKey[viseme] = shape || null
+  })
+
+  // Re-build dictionary using the NEW mapping
+  if (faceMesh && faceMesh.morphTargetDictionary) {
+    visemeNameToIndex = {} // clear old
+    buildVisemeDictionary(faceMesh.morphTargetDictionary)
+  }
+}
+
+function saveMapping() {
+  localStorage.setItem('viseme_mapping_config', JSON.stringify(visemeNameToShapeKey))
+  alert('設定已儲存！下次載入頁面會自動套用。')
+}
+
+// --------------------------------
+
+function buildVisemeDictionary(dict) {
+  // 原本的邏輯是直接拿 key map，現在我們要透過 visemeNameToShapeKey 做中介
+  // 但為了效能，我們還是預先計算 visemeName -> index
+
+  // 1. 為了相容 Azure 傳來的 visemeID，我們需要知道 'aa' 對應到哪個 GLB index
+  // visemeNameToIndex['aa'] = 3 (例如)
+
+  Object.keys(visemeNameToShapeKey).forEach(visemeName => {
+    const targetShapeName = visemeNameToShapeKey[visemeName]
+    if (targetShapeName && dict.hasOwnProperty(targetShapeName)) {
+      visemeNameToIndex[visemeName] = dict[targetShapeName]
+    }
   })
 }
 
@@ -387,6 +512,27 @@ async function handleSpeak() {
   }
 }
 
+
+
+// --- Model Import Logic ---
+
+function handleModelUpload(event) {
+  const file = event.target.files[0]
+  if (!file) return
+
+  const blobUrl = URL.createObjectURL(file)
+  console.log('Loading local model:', file.name)
+
+  // Load new model
+  loadFaceModel(blobUrl)
+
+  // Reset file input so same file can be selected again
+  event.target.value = ''
+}
+
+
 initScene()
 speakBtn.addEventListener('click', handleSpeak)
+saveMappingBtn?.addEventListener('click', saveMapping)
+modelUploadInput?.addEventListener('change', handleModelUpload)
 
