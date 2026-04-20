@@ -68,28 +68,27 @@ const azureVisemeNames = {
   21: 'dz',
 }
 
-// 模型 shape key 對應（修改為 Principle.glb 的單一 ShapeKey）
-// 只有一個 'MouthOpen'，所以除了閉嘴音 (sil, m, mbp) 之外，全部對應到 'MouthOpen'
+// VRoid VRM 標準嘴型對應（Fcl_MTH_* 命名）
 const visemeNameToShapeKey = {
-  sil: null,
-  aa: 'MouthOpen',
-  ee: 'MouthOpen',
-  ih: 'MouthOpen',
-  oh: 'MouthOpen',
-  ou: 'MouthOpen',
-  w: 'MouthOpen',
-  m: null, // 閉嘴
-  fv: 'MouthOpen',
-  l: 'MouthOpen',
-  mbp: null, // 閉嘴
-  ch: 'MouthOpen',
-  th: 'MouthOpen',
-  dh: 'MouthOpen',
-  r: 'MouthOpen',
-  sx: 'MouthOpen',
-  k: 'MouthOpen',
-  t: 'MouthOpen',
-  dz: 'MouthOpen',
+  sil:  null,           // 靜音，嘴保持閉合
+  aa:   'Fcl_MTH_A',   // あ — 大開口母音
+  ee:   'Fcl_MTH_E',   // え — 半開母音
+  ih:   'Fcl_MTH_I',   // い — 扁平嘴型
+  oh:   'Fcl_MTH_O',   // お — 圓形開口
+  ou:   'Fcl_MTH_U',   // う — 嘟嘴圓唇
+  w:    'Fcl_MTH_U',   // 圓唇音，近似 U
+  m:    null,           // 閉嘴音
+  fv:   'Fcl_MTH_A',   // 唇齒音，嘴微開
+  l:    'Fcl_MTH_I',   // 舌尖音，接近 I
+  mbp:  null,           // 閉嘴音
+  ch:   'Fcl_MTH_I',   // 塞擦音，齒縫
+  th:   'Fcl_MTH_A',   // 齒間音，微開
+  dh:   'Fcl_MTH_A',   // 有聲齒間音
+  r:    'Fcl_MTH_U',   // 捲舌音，圓唇
+  sx:   'Fcl_MTH_I',   // 嘶音，齒縫
+  k:    'Fcl_MTH_A',   // 軟顎音，開口
+  t:    'Fcl_MTH_I',   // 齒齦音
+  dz:   'Fcl_MTH_I',   // 塞擦音
 }
 
 const textInput = document.getElementById('text-input')
@@ -257,7 +256,7 @@ function findMorphMesh(root) {
   })
   if (!candidates.length) return null
   const faceMeshByName = candidates.find(c =>
-    /face|head|mouth|facial/i.test(c.name)
+    /face|head|mouth|facial|Fcl/i.test(c.name)
   )
   return faceMeshByName || candidates[0]
 }
@@ -425,6 +424,11 @@ function resetTester() {
 function saveMapping() {
   localStorage.setItem('viseme_mapping_config', JSON.stringify(visemeNameToShapeKey))
   alert('設定已儲存！下次載入頁面會自動套用。')
+}
+
+function resetMapping() {
+  localStorage.removeItem('viseme_mapping_config')
+  alert('已清除自訂設定，將使用 VRoid 預設對應。請重新整理頁面。')
 }
 
 // --------------------------------
@@ -639,6 +643,7 @@ function handleModelUpload(event) {
 initScene()
 speakBtn.addEventListener('click', handleSpeak)
 saveMappingBtn?.addEventListener('click', saveMapping)
+document.getElementById('reset-mapping-btn')?.addEventListener('click', resetMapping)
 modelUploadInput?.addEventListener('change', handleModelUpload)
 resetTesterBtn?.addEventListener('click', resetTester)
 
