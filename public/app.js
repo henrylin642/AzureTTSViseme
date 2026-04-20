@@ -115,6 +115,8 @@ let faceRoot = null
 let faceMesh = null
 let visemeNameToIndex = {}
 let isModelReady = false
+let mixer = null
+const clock = new THREE.Clock()
 
 const lipsyncState = {
   timeline: [],
@@ -193,6 +195,10 @@ function loadFaceModel(modelUrl = FACE_MODEL_URL) {
     faceMesh = null
     isModelReady = false
   }
+  if (mixer) {
+    mixer.stopAllAction()
+    mixer = null
+  }
 
   loader.load(
     modelUrl,
@@ -202,6 +208,15 @@ function loadFaceModel(modelUrl = FACE_MODEL_URL) {
       faceRoot.rotation.set(0, Math.PI, 0) // 讓人臉朝向相機
       faceRoot.scale.set(0.9, 0.9, 0.9) // 如需縮小或放大可調整此比例
       scene.add(faceRoot)
+
+      // 播放模型內建動畫（idle 等）
+      if (gltf.animations?.length) {
+        mixer = new THREE.AnimationMixer(faceRoot)
+        const idleClip = gltf.animations[0]
+        const action = mixer.clipAction(idleClip)
+        action.play()
+        console.log('播放動畫：', idleClip.name, '，共', gltf.animations.length, '個 clip')
+      }
 
       faceMesh = findMorphMesh(faceRoot)
       if (faceMesh?.morphTargetDictionary) {
@@ -233,13 +248,18 @@ function loadFaceModel(modelUrl = FACE_MODEL_URL) {
 }
 
 function findMorphMesh(root) {
-  let target = null
+  // 優先找名稱含 face/head/mouth 的 mesh（全身模型臉部通常這樣命名）
+  const candidates = []
   root.traverse((child) => {
-    if (!target && child.isMesh && child.morphTargetDictionary) {
-      target = child
+    if (child.isMesh && child.morphTargetDictionary && Object.keys(child.morphTargetDictionary).length > 0) {
+      candidates.push(child)
     }
   })
-  return target
+  if (!candidates.length) return null
+  const faceMeshByName = candidates.find(c =>
+    /face|head|mouth|facial/i.test(c.name)
+  )
+  return faceMeshByName || candidates[0]
 }
 
 // --- Dynamic Mapping UI Logic ---
@@ -477,6 +497,8 @@ function applyViseme(visemeName) {
 
 function renderLoop() {
   requestAnimationFrame(renderLoop)
+  const delta = clock.getDelta()
+  mixer?.update(delta)
   controls?.update()
   updateLipsync()
   renderer?.render(scene, camera)
