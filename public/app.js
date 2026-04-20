@@ -239,7 +239,9 @@ function loadFaceModel(modelUrl = FACE_MODEL_URL) {
 
         resetAllMorphs()
         isModelReady = true
-        setStatus('模型就緒，請輸入文字。')
+        const mappedCount = Object.values(visemeNameToShapeKey).filter(v => v && availableShapes.includes(v)).length
+        console.log('Viseme index map:', visemeNameToIndex)
+        setStatus(`模型就緒（找到 ${availableShapes.length} 個 morph，${mappedCount} 個 viseme 有對應）`)
       } else {
         setStatus('模型缺少 morph target，請檢查 GLB。')
       }
