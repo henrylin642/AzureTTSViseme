@@ -155,12 +155,19 @@ function initScene() {
   controls.autoRotate = false
   controls.autoRotateSpeed = 0.4
 
-  const hemiLight = new THREE.HemisphereLight(0xffffff, 0x111122, 1.15)
+  const ambientLight = new THREE.AmbientLight(0xffffff, 3)
+  scene.add(ambientLight)
+
+  const hemiLight = new THREE.HemisphereLight(0xffffff, 0x8888aa, 2)
   scene.add(hemiLight)
 
-  const dirLight = new THREE.DirectionalLight(0xffffff, 1.2)
+  const dirLight = new THREE.DirectionalLight(0xffffff, 3)
   dirLight.position.set(3, 4, 5)
   scene.add(dirLight)
+
+  const fillLight = new THREE.DirectionalLight(0xffffff, 1.5)
+  fillLight.position.set(-3, 2, -3)
+  scene.add(fillLight)
 
   loadFaceModel()
   window.addEventListener('resize', onWindowResize)
