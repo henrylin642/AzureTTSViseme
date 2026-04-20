@@ -150,8 +150,8 @@ function initScene() {
   controls = new OrbitControls(camera, canvas)
   controls.enableZoom = true
   controls.minDistance = 0.4
-  controls.maxDistance = 2.5
-  controls.enablePan = false
+  controls.maxDistance = 5
+  controls.enablePan = true
   controls.autoRotate = false
   controls.autoRotateSpeed = 0.4
 
