@@ -224,15 +224,18 @@ function loadFaceModel(modelUrl = FACE_MODEL_URL) {
       if (faceMesh?.morphTargetDictionary) {
         console.log('Morph targets:', Object.keys(faceMesh.morphTargetDictionary))
 
-        // 1. 先嘗試載入儲存的設定
-        loadSavedMapping()
+        const availableShapes = Object.keys(faceMesh.morphTargetDictionary)
 
-        // 2. 建立 UI
-        renderMappingUI(Object.keys(faceMesh.morphTargetDictionary))
+        // 1. 載入儲存的設定（只套用當前模型有效的 shape key）
+        loadSavedMapping(availableShapes)
+
+        // 2. 建立 UI（顯示用）
+        renderMappingUI(availableShapes)
         renderTesterUI(faceMesh.morphTargetDictionary)
 
-        // 3. 根據 UI 更新目前的 Mapping
-        updateMappingFromUI()
+        // 3. 直接依 visemeNameToShapeKey 建立 index，不從 UI 讀回（避免 UI 未選時蓋掉預設值）
+        visemeNameToIndex = {}
+        buildVisemeDictionary(faceMesh.morphTargetDictionary)
 
         resetAllMorphs()
         isModelReady = true
@@ -271,17 +274,21 @@ function findMorphMesh(root) {
 
 // --- Dynamic Mapping UI Logic ---
 
-function loadSavedMapping() {
+function loadSavedMapping(availableShapes = []) {
   const saved = localStorage.getItem('viseme_mapping_config')
-  if (saved) {
-    try {
-      const parsed = JSON.parse(saved)
-      // 覆蓋目前的預設值
-      Object.assign(visemeNameToShapeKey, parsed)
-      console.log('已載入自訂 Viseme 設定')
-    } catch (e) {
-      console.error('讀取設定失敗', e)
-    }
+  if (!saved) return
+  try {
+    const parsed = JSON.parse(saved)
+    Object.keys(parsed).forEach(key => {
+      const value = parsed[key]
+      // 只套用 null 或當前模型確實有的 shape key，避免舊設定汙染
+      if (value === null || availableShapes.includes(value)) {
+        visemeNameToShapeKey[key] = value
+      }
+    })
+    console.log('已載入自訂 Viseme 設定')
+  } catch (e) {
+    console.error('讀取設定失敗', e)
   }
 }
 
