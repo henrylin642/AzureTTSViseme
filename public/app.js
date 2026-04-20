@@ -147,6 +147,9 @@ function initScene() {
   })
   renderer.setPixelRatio(window.devicePixelRatio)
   renderer.setSize(clientWidth, clientHeight, false)
+  renderer.outputColorSpace = THREE.SRGBColorSpace
+  renderer.toneMapping = THREE.ACESFilmicToneMapping
+  renderer.toneMappingExposure = 2.5
 
   controls = new OrbitControls(camera, canvas)
   controls.enableZoom = true
@@ -247,7 +250,6 @@ function loadFaceModel(modelUrl = FACE_MODEL_URL) {
 }
 
 function findMorphMesh(root) {
-  // 優先找名稱含 face/head/mouth 的 mesh（全身模型臉部通常這樣命名）
   const candidates = []
   root.traverse((child) => {
     if (child.isMesh && child.morphTargetDictionary && Object.keys(child.morphTargetDictionary).length > 0) {
@@ -255,10 +257,16 @@ function findMorphMesh(root) {
     }
   })
   if (!candidates.length) return null
-  const faceMeshByName = candidates.find(c =>
-    /face|head|mouth|facial|Fcl/i.test(c.name)
-  )
-  return faceMeshByName || candidates[0]
+
+  console.log('Morph mesh candidates:', candidates.map(c => `${c.name} (${Object.keys(c.morphTargetDictionary).length} morphs)`))
+
+  // 優先：有 VRoid 嘴型 morph 的 mesh
+  const vroidFace = candidates.find(c => c.morphTargetDictionary['Fcl_MTH_A'] !== undefined)
+  if (vroidFace) return vroidFace
+
+  // 次選：名稱含 face/head/mouth
+  const byName = candidates.find(c => /face|head|mouth|facial/i.test(c.name))
+  return byName || candidates[0]
 }
 
 // --- Dynamic Mapping UI Logic ---
@@ -497,21 +505,25 @@ function updateLipsync() {
   const currentViseme = timeline[idx]
   if (currentViseme?.morphTarget) {
     applyViseme(currentViseme.morphTarget)
+  } else {
+    // null morphTarget = 閉嘴，重置嘴部 morph
+    applyViseme(null)
   }
 }
+
+const MOUTH_SHAPE_KEYS = ['Fcl_MTH_A', 'Fcl_MTH_I', 'Fcl_MTH_U', 'Fcl_MTH_E', 'Fcl_MTH_O', 'Fcl_MTH_Close', 'MouthOpen']
 
 function applyViseme(visemeName) {
   if (!faceMesh?.morphTargetInfluences) return
   const influences = faceMesh.morphTargetInfluences
-  influences.fill(0)
-  let index = visemeNameToIndex[visemeName]
-  if (index === undefined) {
-    index = visemeNameToIndex[`viseme_${visemeName}`]
-  }
-  if (index === undefined) {
-    index = visemeNameToIndex.sil
-  }
 
+  // 只重置嘴部相關 morph，不動眼睛等 mixer 控制的 morph
+  MOUTH_SHAPE_KEYS.forEach(key => {
+    const idx = faceMesh.morphTargetDictionary[key]
+    if (idx !== undefined) influences[idx] = 0
+  })
+
+  const index = visemeNameToIndex[visemeName]
   if (index !== undefined) {
     influences[index] = 1
   }
@@ -573,13 +585,10 @@ async function handleSpeak() {
       if (!azureName) {
         console.warn('未知的 Azure visemeId，退回靜音：', item.visemeId)
       }
-      const shapeKey =
-        visemeNameToShapeKey[azureName] ||
-        visemeNameToShapeKey.sil ||
-        'mouthClose'
+      const shapeKey = visemeNameToShapeKey[azureName] ?? null
       return {
         time: item.time,
-        morphTarget: shapeKey,
+        morphTarget: shapeKey,  // null = 閉嘴，不觸發任何 morph
       }
     })
 
