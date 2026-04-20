@@ -290,17 +290,35 @@ function renderMappingUI(availableShapes) {
   // 這裡列出所有 azureVisemeNames 裡出現過的 unique values
   const uniqueVisemes = [...new Set(Object.values(azureVisemeNames))].sort()
 
+  const visemeDesc = {
+    sil:  '靜音／閉嘴',
+    aa:   '阿 (Ah) — 開口母音',
+    ee:   '欸 (Ee) — 前高母音',
+    ih:   '依 (Ih) — 短前母音',
+    oh:   '喔 (Oh) — 後圓母音',
+    ou:   '嗚 (Ou) — 圓唇母音',
+    w:    '唇圓音 (W)',
+    m:    '閉嘴音 (M) — 嘴唇閉合',
+    fv:   '唇齒音 (F/V)',
+    l:    '舌尖音 (L)',
+    mbp:  '閉嘴音 (M/B/P) — 嘴唇閉合',
+    ch:   '塞擦音 (Ch/J)',
+    th:   '齒間音 (Th)',
+    dh:   '有聲齒間音 (Dh)',
+    r:    '捲舌音 (R)',
+    sx:   '嘶音 (S/Z)',
+    k:    '軟顎音 (K/G)',
+    t:    '齒齦音 (T/D)',
+    dz:   '塞擦音 (Dz)',
+  }
+
   uniqueVisemes.forEach(viseme => {
     const row = document.createElement('div')
     row.className = 'mapping-row'
 
     const label = document.createElement('label')
-    label.textContent = `${viseme}`
-
-    // 加上簡單說明
-    if (viseme === 'sil') label.textContent += ' (靜音/閉嘴)'
-    else if (viseme === 'aa') label.textContent += ' (阿/Ah)'
-    else if (viseme === 'ou') label.textContent += ' (嗚/Ou)'
+    const desc = visemeDesc[viseme] || ''
+    label.innerHTML = `<strong>${viseme}</strong><span class="viseme-desc">${desc}</span>`
 
     const select = document.createElement('select')
     select.dataset.viseme = viseme
