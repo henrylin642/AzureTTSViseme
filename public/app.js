@@ -111,7 +111,8 @@ let scene
 let camera
 let controls
 let faceRoot = null
-let faceMesh = null
+let faceMesh = null      // 主要 mesh，用於取得 morphTargetDictionary
+let faceMeshes = []      // 所有需要同步更新的 face mesh（VRoid 有多個）
 let visemeNameToIndex = {}
 let isModelReady = false
 let mixer = null
@@ -195,6 +196,7 @@ function loadFaceModel(modelUrl = FACE_MODEL_URL) {
     scene.remove(faceRoot)
     faceRoot = null
     faceMesh = null
+    faceMeshes = []
     isModelReady = false
   }
   if (mixer) {
@@ -222,6 +224,16 @@ function loadFaceModel(modelUrl = FACE_MODEL_URL) {
 
       faceMesh = findMorphMesh(faceRoot)
       if (faceMesh?.morphTargetDictionary) {
+        // 收集所有共享同一套 morph 的 mesh（VRoid 臉部由多個 mesh 組成）
+        const shapeCount = Object.keys(faceMesh.morphTargetDictionary).length
+        faceMeshes = []
+        faceRoot.traverse(child => {
+          if (child.isMesh && child.morphTargetDictionary &&
+              Object.keys(child.morphTargetDictionary).length === shapeCount) {
+            faceMeshes.push(child)
+          }
+        })
+        console.log(`Face meshes collected: ${faceMeshes.length}`)
         console.log('Morph targets:', Object.keys(faceMesh.morphTargetDictionary))
 
         const availableShapes = Object.keys(faceMesh.morphTargetDictionary)
@@ -468,8 +480,7 @@ function buildVisemeDictionary(dict) {
 }
 
 function resetAllMorphs() {
-  if (!faceMesh?.morphTargetInfluences) return
-  faceMesh.morphTargetInfluences.fill(0)
+  faceMeshes.forEach(mesh => mesh.morphTargetInfluences?.fill(0))
 }
 
 function stopLipsync() {
@@ -523,19 +534,20 @@ function updateLipsync() {
 const MOUTH_SHAPE_KEYS = ['Fcl_MTH_A', 'Fcl_MTH_I', 'Fcl_MTH_U', 'Fcl_MTH_E', 'Fcl_MTH_O', 'Fcl_MTH_Close', 'MouthOpen']
 
 function applyViseme(visemeName) {
-  if (!faceMesh?.morphTargetInfluences) return
-  const influences = faceMesh.morphTargetInfluences
+  if (!faceMeshes.length) return
+  const index = visemeName ? visemeNameToIndex[visemeName] : undefined
 
-  // 只重置嘴部相關 morph，不動眼睛等 mixer 控制的 morph
-  MOUTH_SHAPE_KEYS.forEach(key => {
-    const idx = faceMesh.morphTargetDictionary[key]
-    if (idx !== undefined) influences[idx] = 0
+  faceMeshes.forEach(mesh => {
+    if (!mesh.morphTargetInfluences || !mesh.morphTargetDictionary) return
+    // 只重置嘴部 morph，保留眼睛等 mixer 控制的值
+    MOUTH_SHAPE_KEYS.forEach(key => {
+      const idx = mesh.morphTargetDictionary[key]
+      if (idx !== undefined) mesh.morphTargetInfluences[idx] = 0
+    })
+    if (index !== undefined) {
+      mesh.morphTargetInfluences[index] = 1
+    }
   })
-
-  const index = visemeNameToIndex[visemeName]
-  if (index !== undefined) {
-    influences[index] = 1
-  }
 }
 
 function renderLoop() {
